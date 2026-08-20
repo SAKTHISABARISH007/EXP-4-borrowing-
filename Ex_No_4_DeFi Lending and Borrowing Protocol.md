@@ -31,56 +31,65 @@ Program:
 pragma solidity ^0.8.20;
 
 contract DeFiLending {
-    address public owner;
-    uint256 public interestRate = 5; // 5% interest per cycle
-    uint256 public liquidationThreshold = 150; // 150% collateralization
-    mapping(address => uint256) public deposits;
+
+    uint256 public interestRate = 20;   // 20% interest per cycle
+    uint256 public liquidationThreshold = 150; 
+
     mapping(address => uint256) public borrowed;
     mapping(address => uint256) public collateral;
 
-    event Deposited(address indexed user, uint256 amount);
-    event Borrowed(address indexed user, uint256 amount, uint256 collateral);
-    event Liquidated(address indexed user, uint256 debtRepaid, uint256 collateralSeized);
+    event Borrowed(address user, uint256 amount, uint256 collateral);
+    event InterestAdded(address user, uint256 newDebt);
+    event Liquidated(address user, uint256 collateralSeized);
 
-    constructor() {
-        owner = msg.sender;
-    }
-
-    function deposit() public payable {
-        require(msg.value > 0, "Deposit must be greater than zero");
-        deposits[msg.sender] += msg.value;
-        emit Deposited(msg.sender, msg.value);
-    }
-
+    // Borrow function (Collateral must be given here)
     function borrow(uint256 amount) public payable {
-        require(msg.value >= (amount * liquidationThreshold) / 100, "Not enough collateral");
+
+        require(msg.value >= (amount * liquidationThreshold)/100, 
+        "Not enough collateral");
+
         borrowed[msg.sender] += amount;
         collateral[msg.sender] += msg.value;
+
         payable(msg.sender).transfer(amount);
+
         emit Borrowed(msg.sender, amount, msg.value);
     }
 
+    // Interest added to increase debt
+    function addInterest() public {
+
+        uint256 interest = (borrowed[msg.sender] * interestRate)/100;
+        borrowed[msg.sender] += interest;
+
+        emit InterestAdded(msg.sender, borrowed[msg.sender]);
+    }
+
+    // Liquidation
     function liquidate(address borrower) public {
-        require(collateral[borrower] < (borrowed[borrower] * liquidationThreshold) / 100, "Not eligible for liquidation");
-        uint256 debt = borrowed[borrower];
-        uint256 seizedCollateral = collateral[borrower];
+
+        require(
+        collateral[borrower] < (borrowed[borrower] * liquidationThreshold)/100,
+        "Not eligible for liquidation"
+        );
+
+        uint seizedCollateral = collateral[borrower];
 
         borrowed[borrower] = 0;
         collateral[borrower] = 0;
+
         payable(msg.sender).transfer(seizedCollateral);
-        emit Liquidated(borrower, debt, seizedCollateral);
+
+        emit Liquidated(borrower, seizedCollateral);
     }
+
+    // Deposit ETH into contract so it can lend
+    receive() external payable {}
 }
 
 ```
 # Expected Output:
-Users can deposit ETH and earn interest.
-
-
-Users can borrow ETH by providing collateral.
-
-
-If collateral < 150% of borrowed amount, liquidators can seize the collateral.
+<img width="1920" height="1080" alt="Screenshot 2026-08-20 140042" src="https://github.com/user-attachments/assets/08790340-44d7-4e48-869c-e5b5ff00e86d" />
 
 
 
@@ -94,4 +103,5 @@ Introduces risk management: overcollateralization and liquidation.
 Directly related to DeFi protocols like Aave and Compound.
 
 # RESULT : 
+Thus, the DeFi Lending and Borrowing smart contract was successfully deployed, demonstrating borrowing, collateralization, interest accrual, and liquidation mechanisms in a decentralized finance system.
 
